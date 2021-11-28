@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envio-test  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: envio-test
+  template:
+    metadata:
+      labels:
+        app: envio-test
+    spec:
+      containers:
+      - name: envio-test
+        image: 1234.aws.io/envio:${BUILD_NUMBER}
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: "0.5"
+        volumeMounts:
+          - name: blob02
+            mountPath: "/mnt/blob"
+        ports:
+        - containerPort: 80
+        env:
+        - name: APP
+          value: "Beagle"
+        - name: AZ_CONTAINER_REGISTER
+          value: "${AZ_CONTAINER_REGISTRY}"
+        - name: ENV
+          value: "${ENV}"
+      volumes:
+        - name: blob02
+          persistentVolumeClaim:
+            claimName: pvc-blob-manual
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kvname"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envio-test  
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: envio-test

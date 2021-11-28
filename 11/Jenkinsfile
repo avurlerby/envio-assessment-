@@ -1,0 +1,19 @@
+Pipeline {
+    stages {
+        stage('Pre build environment') {
+            steps {
+                script {
+                    sh 'docker build -t $REPO_OWNER/$REPO_NAME .'
+                }
+            }
+        }
+        stage('Push to ECR') {
+            sh 'eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)'
+            sh 'docker tag $REPO_OWNER/$REPO_NAME $AWS_REGISTRY_URL/$REPO_NAME-$ENV'
+            sh 'docker push $AWS_REGISTRY_URL/$REPO_NAME-$ENV'
+        }
+        stage (' Deploy to K8s') {
+            sh 'cat ./deployment.yaml | envsubst | kubectl apply -f - '
+        }
+    }
+}
